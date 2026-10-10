@@ -37,7 +37,7 @@ function daftar(e) {
   const username = String(
     data.get("username") || data.get("email") || ""
   ).trim().toLowerCase();
-  const password = String(data.get("password") || "").trim();
+  const password = String(data.get("password") || data.get("pass") || "").trim();
 
   if (!nama || !username || !password) {
     alert("Lengkapi nama, username/email, dan password.");
