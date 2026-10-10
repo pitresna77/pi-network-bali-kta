@@ -1,150 +1,38 @@
- function tab(id, btn) {
-  document.querySelectorAll(".tab-content").forEach(el => {
-    el.style.display = "none";
+(() => {
+  const KEY = "piNetworkBaliKtaDemoMembers";
+  const $ = (id) => document.getElementById(id);
+  const read = () => { try { const x = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(x) ? x : []; } catch { return []; } };
+  const status = (id, msg, error=false) => { $(id).textContent=msg; $(id).style.color=error?"#b42318":"#5422a8"; };
+  const newId = () => "PIB-" + Math.floor(1000000 + Math.random()*9000000);
+  function tab(target) {
+    document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.target===target));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.toggle("hidden", p.id!==target));
+    status("daftar-status",""); status("login-status","");
+  }
+  document.querySelectorAll(".tab").forEach(b => b.addEventListener("click",()=>tab(b.dataset.target)));
+  function show(member) {
+    $("card-nama").textContent=member.nama; $("card-id").textContent=member.id; $("card-domisili").textContent=member.domisili;
+    $("card-date").textContent=new Date(member.createdAt).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+    $("qr-placeholder").title="Ilustrasi untuk ID "+member.id;
+    $("kartu-area").classList.remove("hidden"); $("kartu-area").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  $("daftar-form").addEventListener("submit", e => {
+    e.preventDefault(); if(!e.currentTarget.reportValidity()) return;
+    const d=new FormData(e.currentTarget);
+    const member={nama:String(d.get("nama")||"").trim(),wa:String(d.get("wa")||"").trim(),email:String(d.get("email")||"").trim().toLowerCase(),domisili:String(d.get("domisili")||"").trim()};
+    if(!member.nama||!member.wa||!member.email||!member.domisili){status("daftar-status","Mohon lengkapi semua kolom.",true);return;}
+    const list=read();
+    if(list.some(m=>m.email===member.email)){status("daftar-status","Email sudah terdaftar di browser ini. Gunakan menu Lihat KTA.",true);tab("login-panel");$("login-email").value=member.email;return;}
+    member.id=newId(); member.createdAt=new Date().toISOString(); list.push(member);
+    try{localStorage.setItem(KEY,JSON.stringify(list));}catch{status("daftar-status","Penyimpanan browser tidak tersedia.",true);return;}
+    e.currentTarget.reset(); status("daftar-status","Berhasil membuat KTA prototipe. Simpan ID Anda: "+member.id); show(member);
   });
-
-  document.querySelectorAll(".tab-btn").forEach(el => {
-    el.classList.remove("active");
+  $("login-form").addEventListener("submit", e => {
+    e.preventDefault(); const d=new FormData(e.currentTarget); const email=String(d.get("loginEmail")||"").trim().toLowerCase(); const id=String(d.get("loginId")||"").trim().toUpperCase();
+    const m=read().find(x=>x.email===email&&x.id.toUpperCase()===id);
+    if(!m){status("login-status","Data tidak ditemukan di browser ini. Periksa email dan nomor ID.",true);return;}
+    status("login-status","KTA ditemukan."); show(m);
   });
-
-  const page = document.getElementById(id);
-  if (page) page.style.display = "block";
-  if (btn) btn.classList.add("active");
-}
-
-function getMembers() {
-  try {
-    return JSON.parse(localStorage.getItem("ktaMembers") || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveMembers(members) {
-  localStorage.setItem("ktaMembers", JSON.stringify(members));
-}
-
-function daftar(e) {
-  if (e) e.preventDefault();
-
-  const form = e?.target;
-  if (!form) return false;
-
-  const data = new FormData(form);
-  const nama = String(
-    data.get("nama") || data.get("name") || ""
-  ).trim();
-  const username = String(
-    data.get("username") || data.get("email") || ""
-  ).trim().toLowerCase();
-  const password = String(data.get("password") || "").trim();
-
-  if (!nama || !username || !password) {
-    alert("Lengkapi nama, username/email, dan password.");
-    return false;
-  }
-
-  const members = getMembers();
-
-  if (members.some(m => m.username === username)) {
-    alert("Username atau email sudah terdaftar.");
-    return false;
-  }
-
-  const nomor = "PIB-" + Date.now().toString().slice(-8);
-
-  members.push({
-    nama,
-    username,
-    password,
-    nomor,
-    tanggal: new Date().toLocaleDateString("id-ID")
-  });
-
-  saveMembers(members);
-  alert("Pendaftaran berhasil. Silakan login.");
-  form.reset();
-
-  return false;
-}
-
-function login(e) {
-  if (e) e.preventDefault();
-
-  const form = e?.target;
-  if (!form) return false;
-
-  const data = new FormData(form);
-  const username = String(
-    data.get("username") || data.get("email") || ""
-  ).trim().toLowerCase();
-  const password = String(data.get("password") || "").trim();
-
-  const member = getMembers().find(m =>
-    m.username === username && m.password === password
-  );
-
-  if (!member) {
-    alert("Login gagal. Periksa username dan password.");
-    return false;
-  }
-
-  sessionStorage.setItem("ktaSession", member.username);
-  tampilkanKartu(member);
-  alert("Login berhasil. Selamat datang, " + member.nama + "!");
-
-  return false;
-}
-
-function tampilkanKartu(member) {
-  const target = document.getElementById("kartuAnggota")
-    || document.getElementById("hasilKartu")
-    || document.getElementById("memberCard");
-
-  if (!target) {
-    alert("Login berhasil, tetapi area kartu belum tersedia di HTML.");
-    return;
-  }
-
-  const bars = Array.from(member.nomor).map((char, i) => {
-    const lebar = (char.charCodeAt(0) % 3) + 1;
-    return `<span style="display:inline-block;width:${lebar}px;height:34px;background:#111;margin-right:2px"></span>`;
-  }).join("");
-
-  target.innerHTML = `
-    <div style="background:#111;color:white;border:3px solid #c62828;
-      border-radius:14px;padding:20px;max-width:420px;
-      font-family:Arial,sans-serif;text-align:center">
-      <div style="color:#fff;font-size:12px;letter-spacing:2px">
-        PI NETWORK BALI
-      </div>
-      <h2 style="margin:12px 0;color:#fff">KARTU TANDA ANGGOTA</h2>
-      <div style="background:#c62828;height:4px;margin:12px 0"></div>
-      <div style="font-size:12px;color:#ddd">NAMA ANGGOTA</div>
-      <h3>${escapeHTML(member.nama)}</h3>
-      <div style="font-size:12px;color:#ddd">NOMOR ID</div>
-      <p>${escapeHTML(member.nomor)}</p>
-      <div style="background:white;padding:8px;display:inline-block">
-        ${bars}
-      </div>
-      <p style="font-size:10px;color:#ddd">ANGGOTA PI NETWORK BALI</p>
-    </div>`;
-
-  target.style.display = "block";
-}
-
-function escapeHTML(value) {
-  return String(value).replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  })[char]);
-}
-
-function logout() {
-  sessionStorage.removeItem("ktaSession");
-  alert("Anda telah logout.");
-  location.reload();
-}
+  $("print-card").addEventListener("click",()=>window.print());
+  $("hide-card").addEventListener("click",()=>$("kartu-area").classList.add("hidden"));
+})();
