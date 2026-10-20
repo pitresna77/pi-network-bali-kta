@@ -1,4 +1,4 @@
-cz(() => {
+(() => {
   const KEY = "piNetworkBaliKtaDemoMembers";
   const $ = (id) => document.getElementById(id);
   const read = () => { try { const x = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(x) ? x : []; } catch { return []; } };
